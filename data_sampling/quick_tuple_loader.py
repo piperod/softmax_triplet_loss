@@ -13,6 +13,7 @@ class QuickTupleLoader:
 
 
         def _parse_function(filename, label):
+            print(filename)
             image_string = tf.read_file(filename)
             #image_string = tf.Print(image_string,[filename,label],'img name ')
             image_decoded = tf.image.decode_jpeg(image_string,channels=3)
@@ -53,7 +54,7 @@ class QuickTupleLoader:
 
         batch_size = cfg.batch_size
 
-
+       
 
         if is_training:
             if cfg.aug_style == 'batch':
@@ -69,6 +70,7 @@ class QuickTupleLoader:
                 dataset = dataset.batch(batch_size)
         else:
             if cfg.aug_style == 'batch':
+                
                 dataset = dataset.batch(batch_size)
                 dataset = dataset.map(lambda im_batch, lbl_batch: (batch_augment.center_crop(im_batch,cfg.preprocess_func),lbl_batch))
             elif cfg.aug_style == 'img':

@@ -17,6 +17,9 @@ TRAIN_MODE_CHOICES = (
 DB_CHOICES = (
     'flowers',
     'aircrafts',
+    'pnas',
+    'leaves',
+    'fossil',
     # 'dogs',
     # 'birds',
     # 'cars',
@@ -42,7 +45,7 @@ class BaseConfig:
                                  help='Embedding dimension')
         self.parser.add_argument('--batch_size', type=int, default=32,
                                  help='Batch Size')
-        self.parser.add_argument('--gpu', type=str, default='0',
+        self.parser.add_argument('--gpu', type=str, default='3',
                                  help='which gpu')
         self.parser.add_argument('--checkpoint_dir', type=str, default=None,
                                  help='where to save experiment log and model')
@@ -90,15 +93,28 @@ class BaseConfig:
 
         self.parser.add_argument('--frame_size', type=int, default=constants.frame_width,
                                  help='')
+        self.parser.add_argument('--username',type=str,default=None)
 
 
+    def _load_user_setup(self,username=None):
 
-    def _load_user_setup(self):
-        username = getpass.getuser()
-        if username == 'ahmdtaha':  ## VC
-            local_datasets_dir = '/vulcan/scratch/ahmdtaha/datasets/'
-            pretrained_weights_dir = '/vulcan/scratch/ahmdtaha/pretrained/'
-            training_models_dir = '/vulcan/scratch/ahmdtaha/checkpoints/'
+        
+        if username==None:
+            username = getpass.getuser()
+        else:
+            username = username 
+        print(username)
+        if username == 'irodri15':  ## VC
+            local_datasets_dir = '/media/data_cifs2/irodri15/Leafs/Experiments/softmax_triplet/datasets/'
+            pretrained_weights_dir = '/media/data_cifs2/irodri15/Leafs/Experiments/softmax_triplet/pretrained/'
+            training_models_dir = '/media/data_cifs2/irodri15/Leafs/Experiments/softmax_triplet/checkpoints/'
+            caffe_iter_size = 1
+            logging_threshold = 100
+            batch_size = 32
+        elif username == 'irodri15p1':  ## VC
+            local_datasets_dir = '/media/data_cifs/irodri15/Leafs/Experiments/softmax_triplet/datasets/'
+            pretrained_weights_dir = '/media/data_cifs/irodri15/Leafs/Experiments/softmax_triplet/pretrained/'
+            training_models_dir = '/media/data_cifs/irodri15/Leafs/Experiments/softmax_triplet/checkpoints/'
             caffe_iter_size = 1
             logging_threshold = 100
             batch_size = 32
@@ -110,7 +126,7 @@ class BaseConfig:
 
     def parse(self,args):
         cfg = self.parser.parse_args(args)
-        local_datasets_dir, pretrained_weights_dir, training_models_dir, logging_threshold, batch_size, caffe_iter_size = self._load_user_setup()
+        local_datasets_dir, pretrained_weights_dir, training_models_dir, logging_threshold, batch_size, caffe_iter_size = self._load_user_setup(cfg.username)
         cfg.num_classes, cfg.db_path, cfg.db_tuple_loader, cfg.train_csv_file, cfg.val_csv_file, cfg.test_csv_file    = self.db_configuration(cfg.db_name,local_datasets_dir)
         cfg.network_name, cfg.imagenet__weights_filepath, cfg.preprocess_func, cfg.preprocessing_module = self._load_net_configuration(cfg.net,pretrained_weights_dir)
 
@@ -202,6 +218,27 @@ class BaseConfig:
             train_csv_file = '/lists/train_all_sub_list.csv'
             val_csv_file = '/lists/val_sub_list.csv'
             test_csv_file = '/lists/test_all_sub_list.csv'
+        elif dataset_name == 'pnas':
+            num_classes = 19
+            db_path = datasets_dir +'pnas'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_pnas_list.csv'
+            val_csv_file = '/lists/val_pnas_list.csv'
+            test_csv_file = '/lists/test_pnas_list.csv'
+        elif dataset_name == 'leaves':
+            num_classes = 280
+            db_path = datasets_dir +'leaves'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_leaves_list.csv'
+            val_csv_file = '/lists/val_leaves_list.csv'
+            test_csv_file = '/lists/test_leaves_list.csv'
+        elif dataset_name == 'fossil':
+            num_classes = 280
+            db_path = datasets_dir +'fossil'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_fossil_list.csv'
+            val_csv_file = '/lists/val_fossil_list.csv'
+            test_csv_file = '/lists/test_fossil_list.csv'
         else:
             raise NotImplementedError('dataset_name not found')
 

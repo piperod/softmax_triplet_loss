@@ -31,10 +31,16 @@ www.robots.ox.ac.uk/~vgg/research/very_deep/
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
+import os
 import tensorflow as tf
+from PIL import Image
+#import tf_slim as slim
+#slim = tf.contrib.slim
 
-slim = tf.contrib.slim
+cur_dir = os.getcwd()
+print("saving some images for debug")
+print("current directory:",cur_dir)
+
 
 _R_MEAN = 123.68
 _G_MEAN = 116.78
@@ -318,6 +324,7 @@ def inception_preprocess(images):
     # images = tf.Print(images,[tf.reduce_max(images),tf.reduce_min(images)],'images ::')
     ## Images are assumed to be [0,255]
     # images = tf.to_float(images)
+    
     images = images / 255.0
     images = tf.subtract(images, 0.5)
     images = tf.multiply(images, 2.0)
@@ -363,6 +370,8 @@ def preprocess_for_train(image,
   Returns:
     A preprocessed image.
   """
+
+  
   resize_side = tf.random_uniform(
       [], minval=resize_side_min, maxval=resize_side_max+1, dtype=tf.int32)
 
@@ -383,7 +392,7 @@ def preprocess_for_train(image,
   elif preprocess_func == 'vgg':
       print('VGG Format Augmentation')
       image = vgg_preprocess(image)
-
+  
   return image
 
   # image = _mean_image_subtraction(image, [_R_MEAN, _G_MEAN, _B_MEAN])

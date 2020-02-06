@@ -459,7 +459,7 @@ class ResNet50:
             logits = tf.reshape(end_points['resnet_v2_50/logits'], [-1, cfg.num_classes])
             pre_logits = end_points['resnet_v2_50/block4/unit_3/bottleneck_v2']
 
-            center_supervised_cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.gt_lbls,
+            center_supervised_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.gt_lbls,
                                                                                          logits=logits,
                                                                                          name='xentropy_center')
             loss = tf.reduce_mean(center_supervised_cross_entropy, name='xentropy_mean')
@@ -472,14 +472,19 @@ class ResNet50:
             _, accumulated_accuracy = tf.metrics.accuracy(gt, class_prediction)
             _, per_class_acc_acc = tf.metrics.mean_per_class_accuracy(gt, class_prediction,num_classes=cfg.num_classes)
             per_class_acc_acc = tf.reduce_mean(per_class_acc_acc)
-            return loss,pre_logits,accuracy,confusion_mat,accumulated_accuracy,per_class_acc_acc,class_prediction
+            
+            #top_3= tf.math.in_top_k(gt,predictions,3)
+            #supervised_correct_prediction_cast_3 = tf.cast(top_3, tf.float32)
+            #accuracy_3 = tf.reduce_mean(supervised_correct_prediction_cast_3)
+
+            return loss,pre_logits,accuracy,confusion_mat,accumulated_accuracy,per_class_acc_acc,class_prediction,gt,predictions#,accuracy_3
 
         self.train_loss,self.train_pre_logits,self.train_accuracy,self.train_confusion_mat,\
-                        self.train_accumulated_accuracy,self.train_per_class_acc_acc,self.train_class_prediction  = cal_metrics(train_end_points);
+                        self.train_accumulated_accuracy,self.train_per_class_acc_acc,self.train_class_prediction,self.train_gt,self.train_preds  = cal_metrics(train_end_points);
 
 
         self.val_loss,self.val_pre_logits,self.val_accuracy, self.val_confusion_mat,\
-                        self.val_accumulated_accuracy,self.val_per_class_acc_acc,self.val_class_prediction   = cal_metrics(val_end_points);
+                        self.val_accumulated_accuracy,self.val_per_class_acc_acc,self.val_class_prediction,self.val_gt,self.val_preds   = cal_metrics(val_end_points);
 
 
 

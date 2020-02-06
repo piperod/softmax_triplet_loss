@@ -13,11 +13,12 @@ from ranking import triplet_semi
 from ranking import triplet_hard
 import utils.tb_utils as tb_utils
 import utils.tf_utils as tf_utils
+from utils.log_utils import classification_report_csv
 from nets.conv_embed import ConvEmbed
 from data_sampling.quick_tuple_loader import QuickTupleLoader
 from data_sampling.triplet_tuple_loader import TripletTupleLoader
 from config.base_config import BaseConfig
-
+from sklearn.metrics import classification_report
 
 
 
@@ -33,6 +34,7 @@ def main(argv):
     cfg = BaseConfig().parse(argv)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     save_model_dir = cfg.checkpoint_dir
+    print(save_model_dir)
     model_basename = os.path.basename(save_model_dir)
     touch_dir(save_model_dir)
 
@@ -90,7 +92,7 @@ def main(argv):
             embed_dim = cfg.emb_dim
             embedding_net = ConvEmbed(emb_dim=embed_dim, n_input=channels, n_h=h, n_w=w)
             embedding = embedding_net.forward(pre_logits)
-            embedding = tf.nn.l2_normalize(embedding, axis=-1, epsilon=1e-10)
+            embedding = tf.nn.l2_normalize(embedding, dim=-1, epsilon=1e-10)
             margin = cfg.margin
             gt_lbls = tf.argmax(model.gt_lbls, 1);
             metric_loss = triplet_semi.triplet_semihard_loss(gt_lbls, embedding, margin)
@@ -102,7 +104,7 @@ def main(argv):
             embed_dim = cfg.emb_dim
             embedding_net = ConvEmbed(emb_dim=embed_dim, n_input=channels, n_h=h, n_w=w)
             embedding = embedding_net.forward(pre_logits)
-            embedding = tf.nn.l2_normalize(embedding, axis=-1, epsilon=1e-10)
+            embedding = tf.nn.l2_normalize(embedding, dim=-1, epsilon=1e-10)
             margin = cfg.margin
 
             logger.info('Triplet loss lambda {}, with margin {}'.format(cfg.triplet_loss_lambda, margin))
@@ -116,7 +118,7 @@ def main(argv):
             embed_dim = cfg.emb_dim
             embedding_net = ConvEmbed(emb_dim=embed_dim, n_input=channels, n_h=h, n_w=w)
             embedding = embedding_net.forward(pre_logits)
-            embedding = tf.nn.l2_normalize(embedding, axis=-1, epsilon=1e-10)
+            embedding = tf.nn.l2_normalize(embedding, dim=-1, epsilon=1e-10)
             CENTER_LOSS_LAMBDA = 0.003
             CENTER_LOSS_ALPHA = 0.5
             num_fg_classes = cfg.num_classes
@@ -232,16 +234,50 @@ def main(argv):
                     sess.run(validation_iterator.initializer)
 
                     _val_acc_op = 0
+
+                    gts=[]
+                    preds=[]
+                    pred_3=[]
+                    pred_5=[]
                     while True:
                         try:
-
                             # Eval network on validation/testing split
                             feed_dict = {handle: validation_handle}
-                            val_loss_op, batch_accuracy, accuracy_op, _val_acc_op, _val_acc, c_cnf_mat,macro_acc = sess.run(
-                                [val_loss, model.val_accuracy, model_acc_op, val_acc_op, model.val_accumulated_accuracy,
+                            gt,preds_raw,predictions,val_loss_op, batch_accuracy, accuracy_op, _val_acc_op, _val_acc, c_cnf_mat,macro_acc = sess.run(
+                                [model.val_gt,model.val_preds,model.val_class_prediction,val_loss, model.val_accuracy, model_acc_op, val_acc_op, model.val_accumulated_accuracy,
                                  model.val_confusion_mat,model.val_per_class_acc_acc], feed_dict)
+                            gts+=list(gt)
+                            preds+=list(predictions)
+                            for g,p in zip(gt,preds_raw):
+                                preds_sort_3= np.argsort(p)[-3:]
+                                preds_sort_5= np.argsort(p)[-5:]
+                                if g in preds_sort_3:
+                                    pred_3+=[g]
+                                else:
+                                    pred_3+=[preds_sort_3[-1]]
+
+                                if g in preds_sort_5:
+                                    pred_5+=[g]
+                                else:
+                                    pred_5+=[preds_sort_5[-1]]
+                        
                         except tf.errors.OutOfRangeError:
                             logger.info('Val Acc {0}, Macro Acc: {1}'.format(_val_acc,macro_acc))
+                            logger.info('____ Clasification Report Top 1 ____')
+                            report = classification_report(gts,preds,output_dict=True)
+                            csv_pd = classification_report_csv(report)
+                            csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top1%04d.csv'%step))
+                            logger.info(report)
+                            logger.info('____ Clasification Report Top 2 ____')
+                            report = classification_report(gts,pred_3,output_dict=True)
+                            csv_pd = classification_report_csv(report)
+                            csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top2%04d.csv'%step))
+                            logger.info(report)
+                            logger.info('____ Clasification Report Top 3 ____')
+                            report = classification_report(gts,pred_5,output_dict=True)
+                            csv_pd = classification_report_csv(report)
+                            csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top3%04d.csv'%step))
+                            logger.info(report)
                             break
 
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % step)

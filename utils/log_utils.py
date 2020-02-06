@@ -1,6 +1,7 @@
 import logging
 import os
 from utils import os_utils
+import pandas as pd
 
 # tensorflow_logger = logging.getLogger('tensorflow')
 # tensorflow_logger.setLevel(logging.DEBUG)
@@ -183,3 +184,5 @@ def create_logger(log_file):
     return root_logger
 
 
+def classification_report_csv(report):
+    return pd.DataFrame.from_dict(report)

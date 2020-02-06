@@ -41,7 +41,7 @@ class TripletTupleLoader:
         dataset = dataset.shuffle(len(unique_pids))
         num_classes = cfg.batch_size // cfg.Triplet_K
         dataset = dataset.take((len(unique_pids) // num_classes) * num_classes)
-        dataset = dataset.repeat(None)  ## Such sampling is always used during training
+        dataset = dataset.repeat()  #None ## Such sampling is always used during training
 
         # For every PID, get K images.
         dataset = dataset.map(lambda pid: self.sample_k_fids_for_pid(
@@ -50,17 +50,28 @@ class TripletTupleLoader:
 
 
         def _parse_function(filename, label):
+            
+            
+            #tf.print(filename)
             image_string = tf.read_file(filename)
             # image_string = tf.Print(image_string,[filename,label],'img name ')
-            image_decoded = tf.image.decode_jpeg(image_string,channels=3)
-            # print(image_decoded.dtype)
-            # image_decoded = tf.Print(image_decoded, [tf.shape(image_decoded)], 'shape ')
-            # image_resized = tf.image.resize_images(image_decoded, [const.max_frame_size, const.max_frame_size])
-            # image_decoded = tf.image.resize_images(image_decoded, [const.max_frame_size, const.max_frame_size])
-            # image_decoded = tf.cast(image_decoded, tf.uint8)
+            image_decoded = tf.image.decode_image(image_string,channels=3)
+            shape =tf.shape(image_decoded)
+            #if shape[2]!=3:
+            #    tf.print('Problem here?')
+
+                #image_shape = tf.shape(image_decoded)
+                #image_decoded = tf.decode_raw(image_string,tf.uint8)
+                #image_decoded = tf.reshape(image_decoded,image_shape)
+            
+            #tf.Print(image_decoded, [tf.shape(image_decoded)], 'shape ')
+                #image_decoded = tf.Print(image_decoded, [tf.shape(image_decoded)], 'shape ')
+            #image_resized = tf.image.resize_images(image_decoded, [299, 299])
+                #image_decoded = tf.image.resize_images(image_decoded, [const.max_frame_size, const.max_frame_size])
+            #image_decoded = tf.cast(image_decoded, tf.uint8)
 
             return image_decoded, tf.one_hot(label, cfg.num_classes,dtype=tf.int64)
-
+        print('PARSING!!!')
         dataset = dataset.apply(tf.contrib.data.unbatch())
         dataset = dataset.map(_parse_function,num_parallel_calls=cfg.tuple_loader_queue_size)
 
@@ -71,6 +82,9 @@ class TripletTupleLoader:
         if is_training:
             if cfg.aug_style == 'batch':
                 dataset = dataset.batch(batch_size)
+                print('IS TRAINING____________________________________________________')
+                tf.print(im_batch)
+                
                 dataset = dataset.map(lambda im_batch, lbl_batch: (batch_augment.augment(im_batch,cfg.preprocess_func,
                                                                                     horizontal_flip=True,
                                                                                     vertical_flip=False,
@@ -78,17 +92,20 @@ class TripletTupleLoader:
                                                                                     color_aug_probability=0
                                                                                     ), lbl_batch))
             elif cfg.aug_style == 'img':
-                dataset = dataset.map(lambda im, lbl: (
-                img_augment.preprocess_for_train(im, cfg.frame_size, cfg.frame_size,
+                try:
+                    dataset = dataset.map(lambda im, lbl: (
+                    img_augment.preprocess_for_train(im, cfg.frame_size, cfg.frame_size,
                                                  preprocess_func=cfg.preprocess_func), lbl))
-                dataset = dataset.batch(batch_size)
-
+                    dataset = dataset.batch(batch_size)
+                except:
+                    tf.print('Something went pretty bad ')
         dataset = dataset.prefetch(1)
         return dataset
 
 
 
     def __init__(self,imgs,lbls,cfg):
+        print('initi')
         self.dataset = self.dataset_from_files(imgs, lbls,cfg)
 
 
