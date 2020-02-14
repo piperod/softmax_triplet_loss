@@ -34,6 +34,7 @@ from __future__ import print_function
 import os
 import tensorflow as tf
 from PIL import Image
+import math
 #import tf_slim as slim
 #slim = tf.contrib.slim
 
@@ -50,6 +51,10 @@ _SCALE_FACTOR = 0.017
 
 _RESIZE_SIDE_MIN = 350
 _RESIZE_SIDE_MAX = 512
+
+# using rot90, 4  would be 270 
+_ROTATION_ANGLE_MIN = 0
+_ROTATION_ANGLE_MAX = 4
 
 
 def _crop(image, offset_height, offset_width, crop_height, crop_width):
@@ -330,6 +335,28 @@ def inception_preprocess(images):
     images = tf.multiply(images, 2.0)
     return images
 
+def inception_preprocess_leaves(images):
+    # images = tf.Print(images,[tf.reduce_max(images),tf.reduce_min(images)],'images ::')
+    ## Images are assumed to be [0,255]
+    # images = tf.to_float(images)
+    images = tf.compat.v1.image.rgb_to_grayscale(images)
+    images = tf.compat.v1.image.grayscale_to_rgb(images)
+    images = images / 255.0
+    images = tf.subtract(images, 0.5)
+    images = tf.multiply(images, 2.0)
+   
+    return images
+def inception_preprocess_leaves_color(images):
+    # images = tf.Print(images,[tf.reduce_max(images),tf.reduce_min(images)],'images ::')
+    ## Images are assumed to be [0,255]
+    # images = tf.to_float(images)
+   
+    images = images / 255.0
+    images = tf.subtract(images, 0.5)
+    images = tf.multiply(images, 2.0)
+   
+    return images
+
 def denseNet_preprocess(images):
     ## Images are assumed to be [0,255]
     # images = tf.to_float(images)
@@ -351,8 +378,12 @@ def vgg_preprocess(images):
 def preprocess_for_train(image,
                          output_height,
                          output_width,
+                         folder=None,
                          resize_side_min=_RESIZE_SIDE_MIN,
-                         resize_side_max=_RESIZE_SIDE_MAX,preprocess_func='densenet'):
+                         resize_side_max=_RESIZE_SIDE_MAX,
+                         rotation_angle_min=_ROTATION_ANGLE_MIN,
+                         rotation_angle_max=_ROTATION_ANGLE_MAX,
+                         preprocess_func='densenet'):
   """Preprocesses the given image for training.
 
   Note that the actual resizing scale is sampled from
@@ -371,17 +402,32 @@ def preprocess_for_train(image,
     A preprocessed image.
   """
 
-  
-  resize_side = tf.random_uniform(
-      [], minval=resize_side_min, maxval=resize_side_max+1, dtype=tf.int32)
-
+  if preprocess_func in ['inception_leaves','inception_leaves_color']:
+      resize_side = tf.random_uniform(
+      [], minval=int(output_height*1.05), maxval=int(output_height*2), dtype=tf.int32)
+      rotation_angle = tf.random_uniform(
+      [], minval=rotation_angle_min, maxval=rotation_angle_max, dtype=tf.int32)
+      image = tf.image.rot90(image, rotation_angle)
+      image = _aspect_preserving_resize(image, resize_side)
+      image = _central_crop([image], output_height, output_width)[0]
+  else:
+      resize_side = tf.random_uniform(
+          [], minval=resize_side_min, maxval=resize_side_max+1, dtype=tf.int32)
+      rotation_angle = tf.random_uniform(
+      [], minval=0, maxval=0, dtype=tf.int32)
+      image = _aspect_preserving_resize(image, resize_side)
+      image = _random_crop([image], output_height, output_width)[0]
   #resize_side = tf.Print(resize_side,[resize_side],'resize_side :: ')
+  #tf.print(output_width,output_height,resize_side)
+  
 
-  image = _aspect_preserving_resize(image, resize_side)
-  image = _random_crop([image], output_height, output_width)[0]
+  
+  
   image.set_shape([output_height, output_width, 3])
   image = tf.to_float(image)
   image = tf.image.random_flip_left_right(image)
+  
+
 
   if preprocess_func == 'inception_v1':
       print('Inception Format Augmentation')
@@ -392,7 +438,12 @@ def preprocess_for_train(image,
   elif preprocess_func == 'vgg':
       print('VGG Format Augmentation')
       image = vgg_preprocess(image)
-  
+  elif preprocess_func == 'inception_leaves':
+      print('Leaves preprocessing')
+      image = inception_preprocess_leaves(image)
+  elif preprocess_func == 'inception_leaves_color':
+      print('Leaves color preprocessing')
+      image = inception_preprocess_leaves_color(image)
   return image
 
   # image = _mean_image_subtraction(image, [_R_MEAN, _G_MEAN, _B_MEAN])
@@ -415,6 +466,10 @@ def preprocess_for_eval(image, output_height, output_width, resize_side=_RESIZE_
   image = _central_crop([image], output_height, output_width)[0]
   image.set_shape([output_height, output_width, 3])
   image = tf.to_float(image)
+  
+  if preprocess_func =='inception_leaves':
+      print('Inception Leaves')
+      image = inception_preprocess_leaves(image)
 
   if preprocess_func == 'inception_v1':
       print('Inception Format Augmentation')

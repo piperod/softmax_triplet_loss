@@ -5,28 +5,29 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 if __name__ == '__main__':
 
-    num_trials = 3
-    arg_db_name = 'pnas'
-    arg_net = 'resnet50'
-    arg_train_mode = 'cntr'
+    num_trials = 2
+    arg_db_name = 'leaves'
+    arg_net = 'resnet50_leaves'
+    arg_train_mode = 'hard'
     lr = '0.01'
     for idx in range(num_trials):
         args = [
-            '--gpu', '4',
+            '--gpu', '2',
             '--db_name', arg_db_name,
             '--net', arg_net,
             '--train_mode', arg_train_mode,
             '--margin', '0.2',
             '--batch_size','40',
-            '--caffe_iter_size', '1',
-            '--logging_threshold', '100',
+            '--caffe_iter_size', '10',
+            '--logging_threshold', '5',
             '--train_iters', '40000',
-            '--test_interval','100',
+            '--test_interval','10',
             '--learning_rate', lr,
+            #'--training_mode_debug','True',
             '--aug_style', 'img',
             '--username','irodri15p1',
 
-            '--checkpoint_suffix', '_final_lm1_aug_img_fixed_299_' + str(idx)
+            '--checkpoint_suffix', '_dbg_lm1_aug_resize_fixed_299_' + str(idx)
 
             # These flags are used for different experiments
             # '--frame_size','299',

@@ -20,6 +20,8 @@ DB_CHOICES = (
     'pnas',
     'leaves',
     'fossil',
+    'leaves_61',
+    'leaves_pnas',
     # 'dogs',
     # 'birds',
     # 'cars',
@@ -94,6 +96,7 @@ class BaseConfig:
         self.parser.add_argument('--frame_size', type=int, default=constants.frame_width,
                                  help='')
         self.parser.add_argument('--username',type=str,default=None)
+        self.parser.add_argument('--training_mode_debug',type=bool,default=False)
 
 
     def _load_user_setup(self,username=None):
@@ -150,6 +153,16 @@ class BaseConfig:
             network_name = 'nets.resnet_v2.ResNet50'
             imagenet__weights_filepath = pretrained_weights_dir + 'resnet_v2_50/resnet_v2_50.ckpt'
             preprocess_func = 'inception_v1'
+            preprocessing_module = 'data_sampling.augmentation.inception_preprocessing'
+        elif model == 'resnet50_leaves':
+            network_name = 'nets.resnet_v2.ResNet50'
+            imagenet__weights_filepath = pretrained_weights_dir + 'resnet_v2_50/resnet_v2_50.ckpt'
+            preprocess_func = 'inception_leaves'
+            preprocessing_module = 'data_sampling.augmentation.inception_preprocessing'
+        elif model == 'resnet50_leaves_color':
+            network_name = 'nets.resnet_v2.ResNet50'
+            imagenet__weights_filepath = pretrained_weights_dir + 'resnet_v2_50/resnet_v2_50.ckpt'
+            preprocess_func = 'inception_leaves_color'
             preprocessing_module = 'data_sampling.augmentation.inception_preprocessing'
         elif model == 'resnet50_v1':
             network_name = 'nets.resnet_v1.ResNet50'
@@ -226,12 +239,28 @@ class BaseConfig:
             val_csv_file = '/lists/val_pnas_list.csv'
             test_csv_file = '/lists/test_pnas_list.csv'
         elif dataset_name == 'leaves':
-            num_classes = 280
+            num_classes = 190
             db_path = datasets_dir +'leaves'
             db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
             train_csv_file = '/lists/train_leaves_list.csv'
             val_csv_file = '/lists/val_leaves_list.csv'
             test_csv_file = '/lists/test_leaves_list.csv'
+        elif dataset_name == 'leaves_61':
+            num_classes = 61
+            db_path = datasets_dir +'leaves'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_leaves_list_61.csv'
+            val_csv_file = '/lists/val_leaves_list_61.csv'
+            test_csv_file = '/lists/test_leaves_list_61.csv'
+
+        elif dataset_name == 'leaves_pnas':
+            num_classes =19
+            db_path = datasets_dir +'leaves'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_leaves_list_pnas.csv'
+            val_csv_file = '/lists/val_leaves_list_pnas.csv'
+            test_csv_file = '/lists/test_leaves_list_pnas.csv'
+
         elif dataset_name == 'fossil':
             num_classes = 280
             db_path = datasets_dir +'fossil'

@@ -92,13 +92,12 @@ class TripletTupleLoader:
                                                                                     color_aug_probability=0
                                                                                     ), lbl_batch))
             elif cfg.aug_style == 'img':
-                try:
-                    dataset = dataset.map(lambda im, lbl: (
-                    img_augment.preprocess_for_train(im, cfg.frame_size, cfg.frame_size,
+               
+                dataset = dataset.map(lambda im, lbl: (
+                img_augment.preprocess_for_train(im, cfg.frame_size, cfg.frame_size,folder=cfg.checkpoint_dir,
                                                  preprocess_func=cfg.preprocess_func), lbl))
-                    dataset = dataset.batch(batch_size)
-                except:
-                    tf.print('Something went pretty bad ')
+                dataset = dataset.batch(batch_size)
+               
         dataset = dataset.prefetch(1)
         return dataset
 

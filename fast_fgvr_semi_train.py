@@ -64,11 +64,13 @@ def main(argv):
 
     trn_images, trn_lbls = train_iter.imgs_and_lbls()
     val_imgs, val_lbls = val_iter.imgs_and_lbls()
+    test_imgs, test_lbls =trn_images[:50],trn_lbls[:50]
 
 
     with tf.Graph().as_default():
         if cfg.train_mode == 'semi_hard' or cfg.train_mode == 'hard' or cfg.train_mode == 'cntr':
             train_dataset = TripletTupleLoader(trn_images, trn_lbls,cfg).dataset
+            #log_dataset = TripletTupleLoader(test_imgs,test_lbls,cfg).dataset
         elif cfg.train_mode == 'vanilla':
             train_dataset = QuickTupleLoader(trn_images, trn_lbls,cfg,is_training=True, shuffle=True,repeat=True).dataset
         else:
@@ -79,7 +81,9 @@ def main(argv):
         iterator = tf.data.Iterator.from_string_handle(
             handle, train_dataset.output_types, train_dataset.output_shapes)
         images_ph, lbls_ph = iterator.get_next()
+        #batch_xs,batch_ys = training_iterator.get_next()
 
+        
 
         network_class = locate(cfg.network_name)
         model = network_class(cfg,images_ph=images_ph, lbls_ph=lbls_ph)
@@ -174,6 +178,7 @@ def main(argv):
 
         sess = tf.InteractiveSession()
         training_iterator = train_dataset.make_one_shot_iterator()
+        
         validation_iterator = val_dataset.make_initializable_iterator()
         training_handle = sess.run(training_iterator.string_handle())
         validation_handle = sess.run(validation_iterator.string_handle())
@@ -194,7 +199,9 @@ def main(argv):
 
         ckpt_file = os.path.join(save_model_dir, cfg.checkpoint_filename)
 
-
+        
+        train_loss = tf.summary.scalar('Train_loss',model.train_loss)
+        train_accuracy = tf.summary.scalar('Train_Acc',model.train_accuracy)
         val_loss = tf.summary.scalar('Val_Loss', model.val_loss)
         val_acc_op = tf.summary.scalar('Batch_Val_Acc', model.val_accuracy)
         model_acc_op = tf.summary.scalar('Split_Val_Accuracy', model.val_accumulated_accuracy)
@@ -202,6 +209,8 @@ def main(argv):
         best_model_step = 0
         best_acc = 0
         logger.info('Start Training from {}, till {}'.format(start_iter,cfg.train_iters))
+        
+        
         # Start Training
         for step in range(start_iter + 1, cfg.train_iters + 1):
 
@@ -215,13 +224,31 @@ def main(argv):
 
 
             feed_dict = {handle: training_handle}
+            
             model_loss_value, accuracy_value, _= sess.run([model.train_loss, model.train_accuracy, train_op],
                                                                feed_dict)
+            
+            
+      
+            
+
             if cfg.caffe_iter_size > 1:  ## Accumulated Gradient
                 sess.run(zero_ops)
 
             train_time = time.time() - start_time_train
-
+            #training loss
+            loss_summary = tf.Summary(value=[tf.Summary.Value(tag="Train_loss", simple_value=model_loss_value)])
+            acc_summary = tf.Summary(value=[tf.Summary.Value(tag="Train_Acc", simple_value=accuracy_value)])
+            train_writer.add_summary(loss_summary,step)
+            train_writer.add_summary(acc_summary,step)
+            
+            if cfg.training_mode_debug:
+                logger.info('Training mode debug is ON, will save images every iteration.')
+                batch_xs,batch_ys = training_iterator.get_next()
+                summary_op = tf.summary.image('image-batch',batch_xs,max_outputs=10)
+                summary = sess.run(summary_op)
+                train_writer.add_summary(summary)
+            
             if (step == 1 or step % cfg.logging_threshold == 0):
                 logger.info(
                     'i {0:04d} loss {1:4f} Acc {2:2f} Batch Time {3:3f}'.format(step,model_loss_value,
@@ -268,18 +295,24 @@ def main(argv):
                             csv_pd = classification_report_csv(report)
                             csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top1%04d.csv'%step))
                             logger.info(report)
-                            logger.info('____ Clasification Report Top 2 ____')
-                            report = classification_report(gts,pred_3,output_dict=True)
-                            csv_pd = classification_report_csv(report)
-                            csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top2%04d.csv'%step))
-                            logger.info(report)
                             logger.info('____ Clasification Report Top 3 ____')
-                            report = classification_report(gts,pred_5,output_dict=True)
+                            report = classification_report(gts,pred_3,output_dict=True)
                             csv_pd = classification_report_csv(report)
                             csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top3%04d.csv'%step))
                             logger.info(report)
+                            logger.info('____ Clasification Report Top 5 ____')
+                            report = classification_report(gts,pred_5,output_dict=True)
+                            csv_pd = classification_report_csv(report)
+                            csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top5%04d.csv'%step))
+                            logger.info(report)
                             break
+                    #with train_writer.as_default():
+                    
 
+                    batch_xs,batch_ys = training_iterator.get_next()
+                    summary_op = tf.summary.image('image-batch',batch_xs,max_outputs=10)
+                    summary = sess.run(summary_op)
+                    train_writer.add_summary(summary)
                     train_writer.add_run_metadata(run_metadata, 'step%03d' % step)
                     train_writer.add_summary(val_loss_op, step)
                     train_writer.add_summary(_val_acc_op, step)
@@ -287,6 +320,8 @@ def main(argv):
                     train_writer.flush()
 
                     if (step % 100 == 0):
+                        #log_iterator = log_dataset.make_initializable_iterator()
+                        
                         saver.save(sess, ckpt_file)
                         if best_acc < _val_acc:
                             saver.save(sess, ckpt_file + 'best')
