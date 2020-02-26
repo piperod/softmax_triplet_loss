@@ -10,7 +10,8 @@ TRAIN_MODE_CHOICES = (
     'semi_hard', # Softmax  + semi-hard triplet loss
     'hard', # Softmax  + hard triplet loss
     'hard_awtl', # Softmax  + Adaptive weight triplet loss
-    'cntr', # Softmax  + center loss
+    'cntr',
+    'hard_anchor' # Softmax  + center loss
     # 'mgnt', # Softmax  + Magnet loss (not supported in this code base)
 )
 
@@ -22,6 +23,7 @@ DB_CHOICES = (
     'fossil',
     'leaves_61',
     'leaves_pnas',
+    'leaves_fossils',
     # 'dogs',
     # 'birds',
     # 'cars',
@@ -260,9 +262,25 @@ class BaseConfig:
             train_csv_file = '/lists/train_leaves_list_pnas.csv'
             val_csv_file = '/lists/val_leaves_list_pnas.csv'
             test_csv_file = '/lists/test_leaves_list_pnas.csv'
+        elif dataset_name == 'leaves_pnas':
+            num_classes =19
+            db_path = datasets_dir +'leaves'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_leaves_list_pnas.csv'
+            val_csv_file = '/lists/val_leaves_list_pnas.csv'
+            test_csv_file = '/lists/test_leaves_list_pnas.csv'
+
+        elif dataset_name == 'leaves_fossils':
+            num_classes = 20
+            db_path = datasets_dir +'leaves_fossils'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_leaves_fossils_list.csv'
+            val_csv_file = '/lists/val_leaves_fossils_list.csv'
+            test_csv_file = '/lists/test_only_leaves_list.csv'
+            
 
         elif dataset_name == 'fossil':
-            num_classes = 280
+            num_classes = 20
             db_path = datasets_dir +'fossil'
             db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
             train_csv_file = '/lists/train_fossil_list.csv'

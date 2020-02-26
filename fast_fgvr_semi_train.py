@@ -16,7 +16,7 @@ import utils.tf_utils as tf_utils
 from utils.log_utils import classification_report_csv
 from nets.conv_embed import ConvEmbed
 from data_sampling.quick_tuple_loader import QuickTupleLoader
-from data_sampling.triplet_tuple_loader import TripletTupleLoader
+from data_sampling.triplet_tuple_loader import TripletTupleLoader,TripletTupleLoaderAnchor
 from config.base_config import BaseConfig
 from sklearn.metrics import classification_report
 
@@ -71,6 +71,8 @@ def main(argv):
         if cfg.train_mode == 'semi_hard' or cfg.train_mode == 'hard' or cfg.train_mode == 'cntr':
             train_dataset = TripletTupleLoader(trn_images, trn_lbls,cfg).dataset
             #log_dataset = TripletTupleLoader(test_imgs,test_lbls,cfg).dataset
+        elif cfg.train_mode == 'semi_hard_anchor' or cfg.train_mode == 'hard_anchor' or cfg.train_mode =='cntr_anchor':
+            train_dataset = TripletTupleLoaderAnchor(trn_images,trn_lbls,cfg).dataset
         elif cfg.train_mode == 'vanilla':
             train_dataset = QuickTupleLoader(trn_images, trn_lbls,cfg,is_training=True, shuffle=True,repeat=True).dataset
         else:
@@ -90,7 +92,7 @@ def main(argv):
 
         # Which loss fn to impose. For example, softmax only is applied in vanilla mode,
         # while softmax + semi-hard triplet is applied in semi_hard mode.
-        if cfg.train_mode == 'semi_hard':
+        if cfg.train_mode == 'semi_hard' or cfg.train_mode == 'semi_hard_anchor':
             pre_logits = model.train_pre_logits
             _, w, h, channels = pre_logits.shape
             embed_dim = cfg.emb_dim
@@ -102,7 +104,7 @@ def main(argv):
             metric_loss = triplet_semi.triplet_semihard_loss(gt_lbls, embedding, margin)
             logger.info('Triplet loss lambda {}, with margin {}'.format(cfg.triplet_loss_lambda,margin))
             total_loss = model.train_loss + cfg.triplet_loss_lambda * tf.reduce_mean(metric_loss)
-        elif cfg.train_mode == 'hard':
+        elif cfg.train_mode == 'hard' or cfg.train_mode == 'hard_anchor':
             pre_logits = model.train_pre_logits
             _, w, h, channels = pre_logits.shape
             embed_dim = cfg.emb_dim
@@ -115,7 +117,7 @@ def main(argv):
             gt_lbls = tf.argmax(model.gt_lbls, 1);
             metric_loss  = triplet_hard.batch_hard(gt_lbls, embedding, margin)
             total_loss = model.train_loss + cfg.triplet_loss_lambda * tf.reduce_mean(metric_loss)
-        elif cfg.train_mode == 'cntr':
+        elif cfg.train_mode == 'cntr' or cfg.train_mode == 'cntr_anchor':
 
             pre_logits = model.train_pre_logits
             _, w, h, channels = pre_logits.shape
