@@ -6,13 +6,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 if __name__ == '__main__':
 
     num_trials = 2
-    arg_db_name = 'leaves_fossils'
+    arg_db_name = 'leaves'
     arg_net = 'resnet50_leaves'
-    arg_train_mode = 'hard'
+    arg_train_mode = 'vanilla'
     lr = '0.01'
     for idx in range(num_trials):
         args = [
-            '--gpu', '1',
+            '--gpu', '6',
             '--db_name', arg_db_name,
             '--net', arg_net,
             '--train_mode', arg_train_mode,
@@ -27,7 +27,7 @@ if __name__ == '__main__':
             '--aug_style', 'img',
             '--username','irodri15p1',
 
-            '--checkpoint_suffix', '_debug_threshold_3_resize_fixed_299_' + str(idx)
+            '--checkpoint_suffix', '_debug_leaves_baseline_' + str(idx)
 
             # These flags are used for different experiments
             # '--frame_size','299',

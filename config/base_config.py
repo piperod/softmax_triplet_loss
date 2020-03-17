@@ -24,6 +24,7 @@ DB_CHOICES = (
     'leaves_61',
     'leaves_pnas',
     'leaves_fossils',
+    'leaves_fossils_out',
     # 'dogs',
     # 'birds',
     # 'cars',
@@ -98,6 +99,7 @@ class BaseConfig:
         self.parser.add_argument('--frame_size', type=int, default=constants.frame_width,
                                  help='')
         self.parser.add_argument('--username',type=str,default=None)
+        self.parser.add_argument('--label_out',type=int,default=None)
         self.parser.add_argument('--training_mode_debug',type=bool,default=False)
 
 
@@ -132,7 +134,7 @@ class BaseConfig:
     def parse(self,args):
         cfg = self.parser.parse_args(args)
         local_datasets_dir, pretrained_weights_dir, training_models_dir, logging_threshold, batch_size, caffe_iter_size = self._load_user_setup(cfg.username)
-        cfg.num_classes, cfg.db_path, cfg.db_tuple_loader, cfg.train_csv_file, cfg.val_csv_file, cfg.test_csv_file    = self.db_configuration(cfg.db_name,local_datasets_dir)
+        cfg.num_classes, cfg.db_path, cfg.db_tuple_loader, cfg.train_csv_file, cfg.val_csv_file, cfg.test_csv_file    = self.db_configuration(cfg.db_name,local_datasets_dir,cfg.label_out)
         cfg.network_name, cfg.imagenet__weights_filepath, cfg.preprocess_func, cfg.preprocessing_module = self._load_net_configuration(cfg.net,pretrained_weights_dir)
 
         if cfg.checkpoint_dir is None:
@@ -196,7 +198,7 @@ class BaseConfig:
 
         return network_name,imagenet__weights_filepath,preprocess_func,preprocessing_module
 
-    def db_configuration(self, dataset_name, datasets_dir):
+    def db_configuration(self, dataset_name, datasets_dir,label_out=None):
 
         if dataset_name == 'flowers':
             num_classes = 102
@@ -271,12 +273,21 @@ class BaseConfig:
             test_csv_file = '/lists/test_leaves_list_pnas.csv'
 
         elif dataset_name == 'leaves_fossils':
-            num_classes = 20
+            num_classes = 18
             db_path = datasets_dir +'leaves_fossils'
             db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
             train_csv_file = '/lists/train_leaves_fossils_list.csv'
             val_csv_file = '/lists/val_leaves_fossils_list.csv'
-            test_csv_file = '/lists/test_only_leaves_list.csv'
+            test_csv_file = '/lists/test_only_fossils_list.csv'
+
+        elif dataset_name == 'leaves_fossils_out':
+            l = label_out
+            num_classes = 18
+            db_path = datasets_dir +'leaves_fossils'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_leaves_fossils_list_%02d.csv'%l
+            val_csv_file = '/lists/test_leaves_fossils_list_%02d.csv'%l
+            test_csv_file = '/lists/test_leaves_fossils_list_%02d.csv'%l
             
 
         elif dataset_name == 'fossil':

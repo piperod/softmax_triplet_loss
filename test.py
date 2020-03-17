@@ -174,7 +174,7 @@ if __name__ == '__main__':
             '--test_interval','10',
             '--learning_rate', lr,
             '--aug_style', 'img',
-            '--checkpoint_suffix','_debug_anchor_resize_fixed_299_' + str(idx)
+            '--checkpoint_suffix','_debug_threshold_3_18_classes_'+str(idx)#'_debug_anchor_resize_fixed_299_' + str(idx)
 
             # These flags are used for different experiments
             # '--frame_size','299',
