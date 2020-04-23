@@ -29,8 +29,6 @@ class TripletTupleLoader:
         return selected_fids, tf.fill([batch_k], pid)
 
     def dataset_from_files(self,train_imgs, train_lbls,cfg):
-        fossils_ids  = [im for im in train_imgs if '/Fossil/' in im ]
-        print(fossils_ids[0])
         train_imgs = np.array(train_imgs)
         train_lbls = np.array(train_lbls,dtype=np.int32)
         unique_pids = np.unique(train_lbls)
@@ -115,27 +113,63 @@ class TripletTupleLoaderAnchor:
     This code is taken from https://github.com/VisualComputingInstitute/triplet-reid/blob/master/train.py
     Given a list of filenames and their corrsponding labels, sample_k_fids_for_pid samples batch_k samples from a random selected class
     """
-    def sample_k_fids_for_pid_anchor(self,pid, all_fids, all_pids,anchor_fids, anchor_pids,batch_k):
-        """ Given a PID, select K FIDs of that specific PID. """
-
-        possible_fids = tf.boolean_mask(all_fids, tf.equal(all_pids, pid))
-        possible_anchor_fids = tf.boolean_mask(anchor_fids, tf.equal(anchor_pids, pid))
-        possible_fids = tf.concat([possible_anchor_fids,possible_fids],0)
-        #anchor_fids = tf.boolean_mask(all_fids, tf. )
+    def select_fids_anchor(self):
         # The following simply uses a subset of K of the possible FIDs
         # if more than, or exactly K are available. Otherwise, we first
         # create a padded list of indices which contain a multiple of the
         # original FID count such that all of them will be sampled equally likely.
-        count = tf.shape(possible_fids)[0]
-        padded_count = tf.cast(tf.ceil(batch_k / tf.cast(count, tf.float32)), tf.int32) * count
+        count = tf.shape(self.possible_fids)[0]
+        padded_count = tf.cast(tf.ceil(1 / tf.cast(count, tf.float32)), tf.int32) * count
         full_range = tf.mod(tf.range(padded_count), count)
-
-        # Sampling is always performed by shuffling and taking the first k-1. securing there is at least one anchor
         shuffled = tf.random_shuffle(full_range)
-        selected_fids = tf.gather(possible_fids, shuffled[:batch_k])#shuffled[:batch_k-1])
+        selected_fids = tf.gather(self.possible_fids, shuffled[:1])
 
+        count = tf.shape(self.possible_anchor_fids)[0]
+        padded_count = tf.cast(tf.ceil((self.batch_k-1)/ tf.cast(count, tf.float32)), tf.int32) * count
+        full_range = tf.mod(tf.range(padded_count), count)
+        shuffled = tf.random_shuffle(full_range)
+        selected_anchor_fids = tf.gather(self.possible_anchor_fids, shuffled[:self.batch_k-1])
+        selected = tf.concat([selected_fids,selected_anchor_fids],0)
+        return selected
+
+    def flip_anchors(self):
+        return self.possible_anchor_fids, self.possible_fids
+
+    def keep_anchors(self):
+        return self.possible_fids,self.possible_anchor_fids
+
+    def same_anchors(self):
+        return self.possible_fids,self.possible_fids
+
+    def sample_k_fids_for_pid_anchor(self,pid, all_fids, all_pids,anchor_fids, anchor_pids,batch_k):
+        """ Given a PID, select K FIDs of that specific PID. """
+        self.batch_k = batch_k
+        self.possible_fids = tf.boolean_mask(all_fids, tf.equal(all_pids, pid))
+        self.possible_anchor_fids = tf.boolean_mask(anchor_fids, tf.equal(anchor_pids, pid))
+
+        # If there is no Fossil in that class use only leaves. Leave one out fosill experiment
+        size = tf.shape(self.possible_anchor_fids)
+        pred = tf.equal(size[0],0)
+        self.possible_fids,self.possible_anchor_fids = tf.cond(pred, self.same_anchors, self.keep_anchors)
+
+        # If there is no Leave in that class use only fossils
+        size = tf.shape(self.possible_fids)
+        pred = tf.equal(size[0],0)
+        self.possible_fids,self.possible_anchor_fids = tf.cond(pred, self.flip_anchors, self.keep_anchors)
+        self.possible_fids,self.possible_anchor_fids = tf.cond(pred, self.same_anchors, self.keep_anchors)
         
-        return selected_fids, tf.fill([batch_k], pid)
+        # Flip rules to use Leaves as anchor, Fossils as an achor
+        p_order = tf.random_uniform(shape=[], minval=0., maxval=1., dtype=tf.float32)
+        pred = tf.less(p_order, 0.5)
+        self.possible_fids,self.possible_anchor_fids = tf.cond(pred, self.flip_anchors, self.keep_anchors)
+        p_order = tf.random_uniform(shape=[], minval=0., maxval=1., dtype=tf.float32)
+        pred = tf.less(p_order, 0.5)
+        self.possible_fids,self.possible_anchor_fids = tf.cond(pred, self.same_anchors, self.keep_anchors)
+
+        selected = self.select_fids_anchor()
+
+        return selected, tf.fill([batch_k], pid)
+
 
     def dataset_from_files(self,train_imgs, train_lbls,cfg):
         #anchor_string = cfg.anchor_string
@@ -143,11 +177,11 @@ class TripletTupleLoaderAnchor:
         anchor_fids  = [[im,j] for j,im in enumerate(train_imgs) if '/Fossil/' in im ]
         anchor_pids = np.array([train_lbls[a[1]] for a in anchor_fids],dtype=np.int32)
         anchor_fids = np.array([img[0] for img in anchor_fids])
-        #print(anchor_fids)
+        print(anchor_fids)
         other_fids  = [[im,j] for j,im in enumerate(train_imgs) if '/Leaves/' in im ]
         other_pids = np.array([train_lbls[a[1]] for a in other_fids],dtype=np.int32)
         other_fids = np.array([img[0] for img in other_fids])
-        
+        print(other_fids)
         train_imgs = np.array(train_imgs)
         train_lbls = np.array(train_lbls,dtype=np.int32)
         unique_pids = np.unique(train_lbls)

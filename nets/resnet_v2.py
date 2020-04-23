@@ -390,9 +390,10 @@ class ResNet50:
                         break
                 else:
                     variables_to_restore.append(var)
-            # print(variables_to_restore)
-            init_fn = tf.contrib.framework.assign_from_checkpoint_fn(self.cfg.imagenet__weights_filepath, variables_to_restore,ignore_missing_vars=False)
-            # init_fn = tf.contrib.framework.assign_from_checkpoint_fn(config.imagenet__weights_filepath)
+            print(variables_to_restore)
+            print(self.cfg.imagenet__weights_filepath)
+            #init_fn = tf.contrib.framework.assign_from_checkpoint_fn(self.cfg.imagenet__weights_filepath, variables_to_restore,ignore_missing_vars=False)
+            init_fn = tf.contrib.framework.assign_from_checkpoint_fn(self.cfg.imagenet__weights_filepath,variables_to_restore)
             init_fn(sess)
             return 'Failed to Model Loaded Normally from ' + str(
                 ckpt_file) + '. Thus, Loaded Some variables loaded from imagenet'
@@ -453,7 +454,13 @@ class ResNet50:
                                                   spatial_squeeze=spatial_squeeze,
                                                   reuse=True, scope=scope)
 
+            _, val_end_features =  resnet_v2_50(aug_imgs, 0, is_training=False,
+                                                  global_pool=global_pool, output_stride=output_stride,
+                                                  spatial_squeeze=spatial_squeeze,
+                                                  reuse=True, scope=scope)
 
+       
+              
         def  cal_metrics(end_points):
             gt = tf.argmax(self.gt_lbls, 1);
             logits = tf.reshape(end_points['resnet_v2_50/logits'], [-1, cfg.num_classes])
@@ -479,13 +486,16 @@ class ResNet50:
 
             return loss,pre_logits,accuracy,confusion_mat,accumulated_accuracy,per_class_acc_acc,class_prediction,gt,predictions#,accuracy_3
 
+        
+        
         self.train_loss,self.train_pre_logits,self.train_accuracy,self.train_confusion_mat,\
                         self.train_accumulated_accuracy,self.train_per_class_acc_acc,self.train_class_prediction,self.train_gt,self.train_preds  = cal_metrics(train_end_points);
 
 
         self.val_loss,self.val_pre_logits,self.val_accuracy, self.val_confusion_mat,\
                         self.val_accumulated_accuracy,self.val_per_class_acc_acc,self.val_class_prediction,self.val_gt,self.val_preds   = cal_metrics(val_end_points);
-
+        
+        self.val_end_features , self.val_features_labels = val_end_features, tf.argmax(self.gt_lbls, 1); 
 
 
 

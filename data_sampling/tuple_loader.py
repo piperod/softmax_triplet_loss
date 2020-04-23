@@ -16,7 +16,10 @@ class BaseTupleLoader:
         csv_file = args['csv_file']
         db_path = args['db_path']
         self.data_df = pd.read_csv(db_path + csv_file)
-
+        # Check compatibility with jacob's data
+        if 'file_name' not in self.data_df.columns:
+            self.data_df = pd.read_csv(db_path+csv_file, usecols=['x','y'])
+            self.data_df = self.data_df.rename(columns={'x':'file_name','y':'label'})
         shuffle_data = args['shuffle']
         if shuffle_data:
             self.data_permutation = np.random.permutation(self.data_df.shape[0])

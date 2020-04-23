@@ -11,7 +11,8 @@ TRAIN_MODE_CHOICES = (
     'hard', # Softmax  + hard triplet loss
     'hard_awtl', # Softmax  + Adaptive weight triplet loss
     'cntr',
-    'hard_anchor' # Softmax  + center loss
+    'hard_anchor',
+    'hard_anchor_fossils' # Softmax  + center loss
     # 'mgnt', # Softmax  + Magnet loss (not supported in this code base)
 )
 
@@ -25,6 +26,11 @@ DB_CHOICES = (
     'leaves_pnas',
     'leaves_fossils',
     'leaves_fossils_out',
+    'validation_fossils',
+    'validation_leaves',
+    'validation_pnas',
+    'leaves_out',
+    'pretrain'
     # 'dogs',
     # 'birds',
     # 'cars',
@@ -125,6 +131,13 @@ class BaseConfig:
             caffe_iter_size = 1
             logging_threshold = 100
             batch_size = 32
+        elif username == 'irodri15_validation':  ## VC
+            local_datasets_dir = '/media/data_cifs/jacob/Fossil_Project/replication_data/'
+            pretrained_weights_dir = '/media/data_cifs/irodri15/Leafs/Experiments/softmax_triplet/pretrained/'
+            training_models_dir = '/media/data_cifs/irodri15/Leafs/Experiments/softmax_triplet/checkpoints/'
+            caffe_iter_size = 1
+            logging_threshold = 100
+            batch_size = 32
         else:
             raise NotImplementedError('Invalid username {}. Please set the configuration of this username/machine inside config/base_config.py'.format(username))
 
@@ -161,6 +174,11 @@ class BaseConfig:
         elif model == 'resnet50_leaves':
             network_name = 'nets.resnet_v2.ResNet50'
             imagenet__weights_filepath = pretrained_weights_dir + 'resnet_v2_50/resnet_v2_50.ckpt'
+            preprocess_func = 'inception_leaves'
+            preprocessing_module = 'data_sampling.augmentation.inception_preprocessing'
+        elif model == 'resnet50_leaves_pretrained':
+            network_name = 'nets.resnet_v2.ResNet50'
+            imagenet__weights_filepath = pretrained_weights_dir + 'resnet_v2_50_leaves/resnet_v2_50.ckpt-1' # model.ckptbest
             preprocess_func = 'inception_leaves'
             preprocessing_module = 'data_sampling.augmentation.inception_preprocessing'
         elif model == 'resnet50_leaves_color':
@@ -249,6 +267,13 @@ class BaseConfig:
             train_csv_file = '/lists/train_leaves_list.csv'
             val_csv_file = '/lists/val_leaves_list.csv'
             test_csv_file = '/lists/test_leaves_list.csv'
+        elif dataset_name =='pretrain':
+            num_classes = 190
+            db_path = datasets_dir +'leaves'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/pretrain.csv'
+            val_csv_file = '/lists/pretrain.csv'
+            test_csv_file = '/lists/pretrain.csv'
         elif dataset_name == 'leaves_61':
             num_classes = 61
             db_path = datasets_dir +'leaves'
@@ -278,7 +303,7 @@ class BaseConfig:
             db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
             train_csv_file = '/lists/train_leaves_fossils_list.csv'
             val_csv_file = '/lists/val_leaves_fossils_list.csv'
-            test_csv_file = '/lists/test_only_fossils_list.csv'
+            test_csv_file = '/lists/test_leaves_fossils_list.csv'
 
         elif dataset_name == 'leaves_fossils_out':
             l = label_out
@@ -289,7 +314,14 @@ class BaseConfig:
             val_csv_file = '/lists/test_leaves_fossils_list_%02d.csv'%l
             test_csv_file = '/lists/test_leaves_fossils_list_%02d.csv'%l
             
-
+        elif dataset_name == 'leaves_out':
+            l = label_out
+            num_classes = 18
+            db_path = datasets_dir +'leaves_fossils'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/lists/train_leaves_out_list_000_%02d.csv'%l
+            val_csv_file = '/lists/test_leaves_out_list_000_%02d.csv'%l
+            test_csv_file = '/lists/test_leaves_out_list_000_%02d.csv'%l
         elif dataset_name == 'fossil':
             num_classes = 20
             db_path = datasets_dir +'fossil'
@@ -297,6 +329,30 @@ class BaseConfig:
             train_csv_file = '/lists/train_fossil_list.csv'
             val_csv_file = '/lists/val_fossil_list.csv'
             test_csv_file = '/lists/test_fossil_list.csv'
+
+        elif dataset_name == 'validation_fossils':
+            num_classes = 20
+            db_path = datasets_dir +'single-domain_experiments/Fossil'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/Fossil/train_data.csv'
+            val_csv_file = '/Fossil/val_data.csv'
+            test_csv_file = '/Fossil/test_data.csv'
+
+        elif dataset_name == 'validation_leaves':
+            num_classes = 190
+            db_path = datasets_dir +'single-domain_experiments/Leaves'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/Leaves/train_data.csv'
+            val_csv_file = '/Leaves/val_data.csv'
+            test_csv_file = '/Leaves/test_data.csv'
+
+        elif dataset_name == 'validation_pnas':
+            num_classes = 19
+            db_path = datasets_dir +'single-domain_experiments/PNAS'
+            db_tuple_loader = 'data_sampling.pnas_tuple_loader.PnasTupleLoader'
+            train_csv_file = '/PNAS/train_data.csv'
+            val_csv_file = '/PNAS/test_data.csv'
+            test_csv_file = '/PNAS/test_data.csv'
         else:
             raise NotImplementedError('dataset_name not found')
 

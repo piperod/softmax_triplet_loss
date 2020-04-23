@@ -46,6 +46,7 @@ def main(argv):
     print(model_dir)
     log_file = os.path.join(cfg.checkpoint_dir, cfg.log_filename + '_test.txt')
     logger = log_utils.create_logger(log_file)
+
     with tf.Graph().as_default():
         #meta_file = os.path.join(model_dir,'model.ckptbest.meta')
         #saver = tf.train.import_meta_graph(meta_file)
@@ -93,62 +94,37 @@ def main(argv):
         sess.run(validation_iterator.initializer)
 
         _val_acc_op = 0
-        gts=[]
-        preds=[]
-        pred_3=[]
-        pred_5=[]
+        feat =[]
+        label =[]
+        pooling =[]
         while True:
             try:
                 # Eval network on validation/testing split                            
                 feed_dict = {handle: validation_handle}
-                gt,preds_raw,predictions,acc_per_class,val_loss_op, batch_accuracy, accuracy_op, _val_acc_op, _val_acc, c_cnf_mat,macro_acc = sess.run(
-                                [model.val_gt,model.val_preds,model.val_class_prediction,model.val_per_class_acc_acc,val_loss, model.val_accuracy, model_acc_op, val_acc_op, model.val_accumulated_accuracy,
-                                 model.val_confusion_mat,model.val_per_class_acc_acc], feed_dict)
-                gts+=list(gt)
-                preds+=list(predictions)
-
-                for g,p in zip(gt,preds_raw):
-                    preds_sort_3= np.argsort(p)[-3:]
-                    preds_sort_5= np.argsort(p)[-5:]
-                    if g in preds_sort_3:
-                        pred_3+=[g]
-                    else:
-                        pred_3+=[preds_sort_3[-1]]
-
-                    if g in preds_sort_5:
-                        pred_5+=[g]
-                    else:
-                        pred_5+=[preds_sort_5[-1]]
-
-                #print('Acc per class:',acc_per_class)
-                #print('batch:',batch_accuracy)
-                #print('Confusion Matrix:',c_cnf_mat)
-                #print('gt:',gt)
-                #print('preds:',preds_raw)
-                #print('predictions:',predictions)
-            #logger.info('Val Acc {0}, Macro Acc: {1}'.format(_val_acc,macro_acc))
+                features, labels= sess.run([model.val_end_features,model.val_features_labels], feed_dict)
+                
+                print(labels.shape)
+                feat.append(features['resnet_v2_50/block4'])
+                pooling.append(features['global_pool'])
+                label.append(labels)
+                print('___________________')
             except tf.errors.OutOfRangeError:
-            #    logger.info('problem:')
-            #    logger.info('Val Acc {0}, Macro Acc: {1}'.format(_val_acc,macro_acc))
-                logger.info('____ Clasification Report Top 1 ____')
-                report = classification_report(gts,preds,output_dict=True)
-                csv_pd = classification_report_csv(report)
-                csv_pd.to_csv(os.path.join(model_dir,'Classification_Report_top1.csv'))
-                logger.info(report)
-                logger.info('____ Clasification Report Top 2 ____')
-                report = classification_report(gts,pred_3,output_dict=True)
-                csv_pd = classification_report_csv(report)
-                csv_pd.to_csv(os.path.join(model_dir,'Classification_Report_top2.csv'))
-                logger.info(report)
-                logger.info('____ Clasification Report Top 3 ____')
-                report = classification_report(gts,pred_5,output_dict=True)
-                csv_pd = classification_report_csv(report)
-                csv_pd.to_csv(os.path.join(model_dir,'Classification_Report_top3.csv'))
-                logger.info(report)
 
+                path = model_dir
+                f_folder = os.path.join(model_dir,'features')
+                os.makedirs(f_folder,exist_ok=True)
+                p_file = os.path.join(f_folder,'pooling.npy')
+                f_file = os.path.join(f_folder,'features.npy')
+                l_file = os.path.join(f_folder,'labels.npy')
+                print('pooling')
+                pooling = np.concatenate(pooling)
+                pooling = pooling.reshape(pooling.shape[0],-1)
+                np.save(p_file,pooling)
+                print('7x7')
+                np.save(f_file,feat)
+                print('labels')
+                np.save(l_file,np.array(label))
                 break
-
-                   
         #sess.close()
 
 
@@ -157,33 +133,35 @@ if __name__ == '__main__':
     import json 
     parent_folder = '/media/data_cifs/irodri15/Leafs/Experiments/softmax_triplet/checkpoints'
     path = os.path.join(parent_folder,
-                    'leaves_fossils_resnet50_leaves_lr0.01_B40_caf10_iter10K_lambda1_trn_mode_hard__debug_threshold_3_18_classes_0/')
+                    'leaves_fossils_resnet50_leaves_lr0.01_B45_caf10_iter10K_lambda1_trn_mode_hard_anchor__anchor_max0/')
    
     args_file = os.path.join(path,'args.json')
     with open(args_file,'r') as f:
         arguments = json.load(f)
+    print(arguments)
     num_trials = 1
-    username = 'irodri15p1'
+    username = arguments['username']
     arg_db_name = arguments['db_name']
+    print(arg_db_name)
     arg_net = arguments['net']
     arg_train_mode = arguments['train_mode']
     lr = str(arguments['learning_rate'])#'0.01'
     for idx in range(num_trials):
          args = [
-             '--gpu', '2',
+             '--gpu', '6',
              '--db_name', arg_db_name,
              '--net', arg_net,
              '--train_mode', arg_train_mode,
-             '--margin', '0.2',
-             '--batch_size','40',
-             '--caffe_iter_size', '10',
-             '--logging_threshold', '10',
-             '--train_iters', '10000',
-             '--test_interval','10',
+             '--margin', str(arguments['margin']),
+             '--batch_size',str(arguments['batch_size']),
+             '--caffe_iter_size',str(arguments['caffe_iter_size']),
+             '--logging_threshold', str(arguments['logging_threshold']),
+             '--train_iters', str(arguments['train_iters']),
+             '--test_interval',str(arguments['test_interval']),
              '--learning_rate', lr,
              '--aug_style', 'img',
              '--username',username,
-             '--checkpoint_suffix','_debug_threshold_3_18_classes_'+str(idx)#'_debug_anchor_resize_fixed_299_' + str(idx)
+             '--checkpoint_suffix',arguments['checkpoint_suffix']#'_validation_5050_pretrained_log_'+str(idx)#'_debug_anchor_resize_fixed_299_' + str(idx)
 
              # These flags are used for different experiments
              # '--frame_size','299',

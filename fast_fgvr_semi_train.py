@@ -27,8 +27,8 @@ def touch_dir(path):
         os.makedirs(path)
     else:
         print(path)
-        if not user_io.ask_yes_no_question('Model dir already exists, continue -- override?'):
-            quit()
+        #if not user_io.ask_yes_no_question('Model dir already exists, continue -- override?'):
+        1#quit()
 
 def main(argv):
     cfg = BaseConfig().parse(argv)
@@ -72,6 +72,8 @@ def main(argv):
             train_dataset = TripletTupleLoader(trn_images, trn_lbls,cfg).dataset
             #log_dataset = TripletTupleLoader(test_imgs,test_lbls,cfg).dataset
         elif cfg.train_mode == 'semi_hard_anchor' or cfg.train_mode == 'hard_anchor' or cfg.train_mode =='cntr_anchor':
+            train_dataset = TripletTupleLoaderAnchor(trn_images,trn_lbls,cfg).dataset
+        elif cfg.train_mode == 'hard_anchor_fossils':
             train_dataset = TripletTupleLoaderAnchor(trn_images,trn_lbls,cfg).dataset
         elif cfg.train_mode == 'vanilla':
             train_dataset = QuickTupleLoader(trn_images, trn_lbls,cfg,is_training=True, shuffle=True,repeat=True).dataset
@@ -117,6 +119,21 @@ def main(argv):
             gt_lbls = tf.argmax(model.gt_lbls, 1);
             metric_loss  = triplet_hard.batch_hard(gt_lbls, embedding, margin)
             total_loss = model.train_loss + cfg.triplet_loss_lambda * tf.reduce_mean(metric_loss)
+        elif cfg.train_mode == 'hard_fossils' or cfg.train_mode == 'hard_anchor_fossils':
+            pre_logits = model.train_pre_logits
+            _, w, h, channels = pre_logits.shape
+            embed_dim = cfg.emb_dim
+            embedding_net = ConvEmbed(emb_dim=embed_dim, n_input=channels, n_h=h, n_w=w)
+            embedding = embedding_net.forward(pre_logits)
+            embedding = tf.nn.l2_normalize(embedding, dim=-1, epsilon=1e-10)
+            margin = cfg.margin
+
+            logger.info('Triplet loss lambda {}, with margin {}'.format(cfg.triplet_loss_lambda, margin))
+            gt_lbls = tf.argmax(model.gt_lbls, 1);
+            metric_loss_far  = triplet_hard.batch_hard_fossils(gt_lbls, embedding, margin)
+            metric_loss  = triplet_hard.batch_hard(gt_lbls, embedding, margin)
+            total_loss = model.train_loss + 0.5*cfg.triplet_loss_lambda * tf.reduce_mean(metric_loss) + 0.5*cfg.triplet_loss_lambda*tf.reduce_mean(metric_loss_far)
+
         elif cfg.train_mode == 'cntr' or cfg.train_mode == 'cntr_anchor':
 
             pre_logits = model.train_pre_logits
@@ -156,7 +173,7 @@ def main(argv):
             update_ops.append(centers_update_op)
 
         # print(update_ops)
-
+        
         with tf.control_dependencies(update_ops):
 
             global_step = tf.Variable(0, name='global_step', trainable=False)
