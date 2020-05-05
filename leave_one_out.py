@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     gpu_number = 3
     #,,
-    for l in [2,1,0]:
+    for l in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]:
         #l=0
         num_trials = 1
         arg_db_name = 'leaves_out'
@@ -17,7 +17,7 @@ if __name__ == '__main__':
         lr = '0.01'
         for idx in range(num_trials):
             args = [
-            '--gpu', '0',
+            '--gpu', '5',
             '--db_name', arg_db_name,
             '--label_out',str(l),
             '--net', arg_net,
@@ -34,7 +34,7 @@ if __name__ == '__main__':
             '--aug_style', 'img',
             '--username','irodri15p1',
 
-            '--checkpoint_suffix', '_debug_leave_out_loss_' +str(l)+'_'+ str(idx)
+            '--checkpoint_suffix', '_leave_out_new_loss_' +str(l)+'_'+ str(idx)
 
             # These flags are used for different experiments
             # '--frame_size','299',
