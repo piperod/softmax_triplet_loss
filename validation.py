@@ -1,5 +1,7 @@
 import os
 import fast_fgvr_semi_train
+import neptune 
+neptune.set_project('Serre-Lab/paleo-ai')
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -31,13 +33,13 @@ if __name__ == '__main__':
             '--aug_style', 'img',
             '--username', username,
 
-            '--checkpoint_suffix', '_validation_5050_pretrained_2_'+ str(idx)
+            '--checkpoint_suffix', '_validation_5050_pretrainednew_'+ str(idx)
 
             # These flags are used for different experiments
             # '--frame_size','299',
             ]
         
-
-        fast_fgvr_semi_train.main(args) 
+        
+        fast_fgvr_semi_train.main(args,neptune) 
             
             

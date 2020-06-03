@@ -5,7 +5,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 if __name__ == '__main__':
 
-    num_trials = 2
+    num_trials = 1
     arg_db_name = 'leaves_fossils'
     arg_net = 'resnet50_leaves'
     arg_train_mode = 'hard_anchor'

@@ -30,10 +30,12 @@ def touch_dir(path):
         #if not user_io.ask_yes_no_question('Model dir already exists, continue -- override?'):
         1#quit()
 
-def main(argv):
+def main(argv,neptune_logger=None):
     cfg = BaseConfig().parse(argv)
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.gpu
     save_model_dir = cfg.checkpoint_dir
+    if neptune_logger:
+        neptune_logger.create_experiment(name=save_model_dir.split('/')[-1],params=vars(cfg))
     print(save_model_dir)
     model_basename = os.path.basename(save_model_dir)
     touch_dir(save_model_dir)
@@ -132,7 +134,7 @@ def main(argv):
             gt_lbls = tf.argmax(model.gt_lbls, 1);
             metric_loss_far  = triplet_hard.batch_hard_fossils(gt_lbls, embedding, margin)
             metric_loss  = triplet_hard.batch_hard(gt_lbls, embedding, margin)
-            total_loss = model.train_loss + 0.5*cfg.triplet_loss_lambda * tf.reduce_mean(metric_loss) + 0.5*cfg.triplet_loss_lambda*tf.reduce_mean(metric_loss_far)
+            total_loss = model.train_loss + 0.8*cfg.triplet_loss_lambda * tf.reduce_mean(metric_loss) + 0.2*cfg.triplet_loss_lambda*tf.reduce_mean(metric_loss_far)
 
         elif cfg.train_mode == 'cntr' or cfg.train_mode == 'cntr_anchor':
 
@@ -260,7 +262,8 @@ def main(argv):
             acc_summary = tf.Summary(value=[tf.Summary.Value(tag="Train_Acc", simple_value=accuracy_value)])
             train_writer.add_summary(loss_summary,step)
             train_writer.add_summary(acc_summary,step)
-            
+            if neptune_logger: 
+                neptune_logger.log_metric('Train_loss',model_loss_value)
             if cfg.training_mode_debug:
                 logger.info('Training mode debug is ON, will save images every iteration.')
                 batch_xs,batch_ys = training_iterator.get_next()
@@ -309,18 +312,32 @@ def main(argv):
                         
                         except tf.errors.OutOfRangeError:
                             logger.info('Val Acc {0}, Macro Acc: {1}'.format(_val_acc,macro_acc))
+                            if neptune_logger:
+                                neptune_logger.log_metric('Validation Accuracy Macro',macro_acc)
                             logger.info('____ Clasification Report Top 1 ____')
                             report = classification_report(gts,preds,output_dict=True)
+                            if neptune_logger:
+                                neptune_logger.log_metric('Top 1 f-1',report['weighted avg']['f1-score'])
+                                neptune_logger.log_metric('Top 1 precision',report['weighted avg']['precision'])
+                                neptune_logger.log_metric('Top 1 recall',report['weighted avg']['recall'])
                             csv_pd = classification_report_csv(report)
                             csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top1%04d.csv'%step))
                             logger.info(report)
                             logger.info('____ Clasification Report Top 3 ____')
                             report = classification_report(gts,pred_3,output_dict=True)
+                            if neptune_logger:
+                                neptune_logger.log_metric('Top 3 f-1',report['weighted avg']['f1-score'])
+                                neptune_logger.log_metric('Top 3 precision',report['weighted avg']['precision'])
+                                neptune_logger.log_metric('Top 3 recall',report['weighted avg']['recall'])
                             csv_pd = classification_report_csv(report)
                             csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top3%04d.csv'%step))
                             logger.info(report)
                             logger.info('____ Clasification Report Top 5 ____')
                             report = classification_report(gts,pred_5,output_dict=True)
+                            if neptune_logger:
+                                neptune_logger.log_metric('Top 5 f-1',report['weighted avg']['f1-score'])
+                                neptune_logger.log_metric('Top 5 precision',report['weighted avg']['precision'])
+                                neptune_logger.log_metric('Top 5 recall',report['weighted avg']['recall'])
                             csv_pd = classification_report_csv(report)
                             csv_pd.to_csv(os.path.join(save_model_dir,'Classification_Report_top5%04d.csv'%step))
                             logger.info(report)

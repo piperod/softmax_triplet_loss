@@ -178,7 +178,7 @@ class BaseConfig:
             preprocessing_module = 'data_sampling.augmentation.inception_preprocessing'
         elif model == 'resnet50_leaves_pretrained':
             network_name = 'nets.resnet_v2.ResNet50'
-            imagenet__weights_filepath = pretrained_weights_dir + 'resnet_v2_50_leaves/resnet_v2_50.ckpt-1' # model.ckptbest
+            imagenet__weights_filepath = pretrained_weights_dir + 'resnet_v2_50_leaves/model.ckptbest' # model.ckptbest
             preprocess_func = 'inception_leaves'
             preprocessing_module = 'data_sampling.augmentation.inception_preprocessing'
         elif model == 'resnet50_leaves_color':

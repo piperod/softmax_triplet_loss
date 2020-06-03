@@ -390,8 +390,8 @@ class ResNet50:
                         break
                 else:
                     variables_to_restore.append(var)
-            print(variables_to_restore)
-            print(self.cfg.imagenet__weights_filepath)
+            ##print(variables_to_restore)
+            #print(self.cfg.imagenet__weights_filepath)
             #init_fn = tf.contrib.framework.assign_from_checkpoint_fn(self.cfg.imagenet__weights_filepath, variables_to_restore,ignore_missing_vars=False)
             init_fn = tf.contrib.framework.assign_from_checkpoint_fn(self.cfg.imagenet__weights_filepath,variables_to_restore)
             init_fn(sess)
